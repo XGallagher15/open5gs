@@ -128,6 +128,8 @@ void amf_sbi_send_release_session(
 void amf_sbi_send_release_all_sessions(
         ran_ue_t *ran_ue, amf_ue_t *amf_ue, int state, void *data);
 
+bool amf_sbi_send_sdm_subscription_delete(amf_ue_t *amf_ue);
+
 bool amf_sbi_send_n1_n2_failure_notify(
         amf_sess_t *sess, OpenAPI_n1_n2_message_transfer_cause_e cause);
 

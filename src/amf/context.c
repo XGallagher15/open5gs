@@ -18,6 +18,7 @@
  */
 
 #include "ngap-path.h"
+#include "sbi-path.h"
 
 static amf_context_t self;
 
@@ -2380,6 +2381,14 @@ static void amf_ue_release_old_context(
 
     /* Phase-3 : Clear Session Context in OLD AMF-UE Context */
     memset(&old_amf_ue->sess_list, 0, sizeof(old_amf_ue->sess_list));
+
+    /*
+     * Removing the old UE only clears its local SDM handle. Delete the
+     * remote subscription before losing its URI, without a UE transaction
+     * that would outlive the old context.
+     */
+    if (UDM_SDM_SUBSCRIBED(old_amf_ue))
+        amf_sbi_send_sdm_subscription_delete(old_amf_ue);
 
     amf_ue_remove(old_amf_ue);
 }

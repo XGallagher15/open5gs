@@ -929,6 +929,59 @@ void amf_sbi_send_release_all_sessions(
     }
 }
 
+static int client_sdm_subscription_delete_cb(
+        int status, ogs_sbi_response_t *response, void *data)
+{
+    if (status != OGS_OK) {
+        ogs_log_message(
+                status == OGS_DONE ? OGS_LOG_DEBUG : OGS_LOG_WARN, 0,
+                "SDM subscription DELETE failed [%d]", status);
+        return OGS_ERROR;
+    }
+
+    ogs_assert(response);
+
+    /* Another deregistration request may already have deleted it. */
+    if (response->status != OGS_SBI_HTTP_STATUS_NO_CONTENT &&
+        response->status != OGS_SBI_HTTP_STATUS_NOT_FOUND)
+        ogs_error("SDM subscription DELETE failed [HTTP:%d]",
+                response->status);
+
+    ogs_sbi_response_free(response);
+    return OGS_OK;
+}
+
+bool amf_sbi_send_sdm_subscription_delete(amf_ue_t *amf_ue)
+{
+    bool rc;
+    ogs_sbi_request_t *request = NULL;
+    ogs_sbi_client_t *client = NULL;
+
+    ogs_assert(amf_ue);
+    client = amf_ue->data_change_subscription.client;
+    ogs_assert(client);
+
+    request = amf_nudm_sdm_build_subscription_delete(amf_ue, NULL);
+    if (!request) {
+        ogs_error("[%s] Cannot build SDM subscription DELETE", amf_ue->supi);
+        return false;
+    }
+
+    /*
+     * The old UE context is about to be removed. Do not create a UE SBI
+     * transaction or pass the UE context to the response callback.
+     * Releasing the UE's client reference leaves the client's initial
+     * reference intact, so the queued request can complete independently.
+     */
+    rc = ogs_sbi_send_request_to_client(
+            client, client_sdm_subscription_delete_cb, request, NULL);
+    if (!rc)
+        ogs_error("[%s] Cannot send SDM subscription DELETE", amf_ue->supi);
+
+    ogs_sbi_request_free(request);
+    return rc;
+}
+
 static int client_notify_cb(
         int status, ogs_sbi_response_t *response, void *data)
 {
